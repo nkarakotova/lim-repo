@@ -217,6 +217,8 @@ github.com/nkarakotova/lim-core v0.0.0-20240526101746-84dca0aa3adb h1:PIHh4VMuDi
 github.com/nkarakotova/lim-core v0.0.0-20240526101746-84dca0aa3adb/go.mod h1:T17d4c4SMttCaH9RyoXZAvdKDTcvd5C7SXziZXTFbYw=
 github.com/nkarakotova/lim-core v0.0.0-20240528111622-e44d908809f7 h1:ojTqVym7thel1y+NCvMHqxpi75VVtOFZlEJWRTdDc3E=
 github.com/nkarakotova/lim-core v0.0.0-20240528111622-e44d908809f7/go.mod h1:T17d4c4SMttCaH9RyoXZAvdKDTcvd5C7SXziZXTFbYw=
+github.com/nkarakotova/lim-core v0.0.0-20240528113113-08195ec411b4 h1:B12SluL4iKiZ709REaKxzdzlOCH4W8gzyRzNl5JgZPM=
+github.com/nkarakotova/lim-core v0.0.0-20240528113113-08195ec411b4/go.mod h1:T17d4c4SMttCaH9RyoXZAvdKDTcvd5C7SXziZXTFbYw=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
