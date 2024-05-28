@@ -9,7 +9,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/jinzhu/copier v0.4.0
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/nkarakotova/lim-core v0.0.0-20240526000338-009f57da7c00
+	github.com/nkarakotova/lim-core v0.0.0-20240528111622-e44d908809f7
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.31.0
