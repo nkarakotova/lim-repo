@@ -19,9 +19,6 @@ func (p *PostgresFlags) InitDB(logger *log.Logger) (*sql.DB, error) {
 	logger.Debug("POSTGRES! Start init postgreSQL", "user", p.User, "DBName", p.DBName,
 		"host", p.Host, "port", p.Port)
 
-	logger.Info("POSTGRES! Start init postgreSQL", "user", p.User, "DBName", p.DBName,
-	"host", p.Host, "port", p.Port, "password", p.Password)
-
 	dsnPGConn := fmt.Sprintf("user=%s dbname=%s password=%s host=%s port=%s sslmode=disable",
 		p.User, p.DBName, p.Password,
 		p.Host, p.Port)
@@ -34,7 +31,7 @@ func (p *PostgresFlags) InitDB(logger *log.Logger) (*sql.DB, error) {
 
 	err = db.Ping()
 	if err != nil {
-		logger.Info(err)
+		logger.Fatal(err)
 		logger.Fatal("POSTGRES! Error in method ping")
 		return nil, err
 	}
