@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/nkarakotova/lim-repo/flags"
-	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -17,23 +16,4 @@ type Config struct {
 
 	FirstTrainingTime int `mapstructure:"first_training_time"`
 	LastTrainingTime int `mapstructure:"last_training_time"`
-}
-
-func (c *Config) ParseConfig(configFileName, pathToConfig string) error {
-	v := viper.New()
-	v.SetConfigName(configFileName)
-	v.SetConfigType("json")
-	v.AddConfigPath(pathToConfig)
-
-	err := v.ReadInConfig()
-	if err != nil {
-		return err
-	}
-
-	err = v.Unmarshal(c)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
