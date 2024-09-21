@@ -45,22 +45,10 @@ func CreateCoachPostgreSQLRepository(fields *PostgresRepositoryFields) repositor
 	return NewCoachPostgreSQLRepository(dbx)
 }
 
-func CreateDirectionPostgreSQLRepository(fields *PostgresRepositoryFields) repositories.DirectionRepository {
-	dbx := sqlx.NewDb(fields.DB, "pgx")
-
-	return NewDirectionPostgreSQLRepository(dbx)
-}
-
 func CreateHallPostgreSQLRepository(fields *PostgresRepositoryFields) repositories.HallRepository {
 	dbx := sqlx.NewDb(fields.DB, "pgx")
 
 	return NewHallPostgreSQLRepository(dbx)
-}
-
-func CreateSubscriptionPostgreSQLRepository(fields *PostgresRepositoryFields) repositories.SubscriptionRepository {
-	dbx := sqlx.NewDb(fields.DB, "pgx")
-
-	return NewSubscriptionPostgreSQLRepository(dbx)
 }
 
 func CreateTrainingPostgreSQLRepository(fields *PostgresRepositoryFields) repositories.TrainingRepository {

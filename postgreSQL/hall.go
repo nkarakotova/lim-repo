@@ -18,7 +18,6 @@ import (
 type HallPostgreSQL struct {
 	ID       uint64 `db:"hall_id"`
 	Number   uint64 `db:"number"`
-	Capacity uint64 `db:"capacity"`
 }
 
 type HallPostgreSQLRepository struct {
@@ -31,9 +30,9 @@ func NewHallPostgreSQLRepository(db *sqlx.DB) repositories.HallRepository {
 }
 
 func (h *HallPostgreSQLRepository) Create(ctx context.Context, hall *models.Hall) error {
-	query := `insert into halls(number, capacity) values($1, $2) returning hall_id;`
+	query := `insert into halls(number) values($1) returning hall_id;`
 
-	err := h.txResolver.DefaultTrOrDB(ctx, h.db).QueryRowxContext(ctx, query, hall.Number, hall.Capacity).Scan(&hall.ID)
+	err := h.txResolver.DefaultTrOrDB(ctx, h.db).QueryRowxContext(ctx, query, hall.Number).Scan(&hall.ID)
 	if err != nil {
 		return err
 	}

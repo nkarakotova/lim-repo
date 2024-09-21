@@ -14,14 +14,11 @@ import (
 )
 
 type ClientPostgreSQL struct {
-	ID             uint64        `db:"client_id"`
-	SubscriptionID sql.NullInt64 `db:"subscription_id"`
-	Name           string        `db:"name"`
-	Telephone      string        `db:"telephone"`
-	Mail           string        `db:"mail"`
-	Password       string        `db:"password"`
-	Age            uint16        `db:"age"`
-	Gender         models.Gender `db:"gender"`
+	ID        uint64 `db:"client_id"`
+	Name      string `db:"name"`
+	Telephone string `db:"telephone"`
+	Mail      string `db:"mail"`
+	Password  string `db:"password"`
 }
 
 type ClientPostgreSQLRepository struct {
@@ -36,17 +33,11 @@ func NewClientPostgreSQLRepository(db *sqlx.DB) repositories.ClientRepository {
 func (c *ClientPostgreSQLRepository) Create(ctx context.Context, client *models.Client) error {
 	var err error
 
-	if client.SubscriptionID == 0 {
-		query := `insert into clients(name, telephone, mail, password, age, gender) values($1, $2, $3, $4, $5, $6) returning client_id;`
-		err = c.txResolver.DefaultTrOrDB(ctx, c.db).
-			QueryRowxContext(ctx, query, client.Name, client.Telephone, client.Mail, client.Password, client.Age, client.Gender).
-			Scan(&client.ID)
-	} else {
-		query := `insert into clients(subscription_id, name, telephone, mail, password, age, gender) values($1, $2, $3, $4, $5, $6, $7) returning client_id;`
-		err = c.txResolver.DefaultTrOrDB(ctx, c.db).
-			QueryRowxContext(ctx, query, client.SubscriptionID, client.Name, client.Telephone, client.Mail, client.Password, client.Age, client.Gender).
-			Scan(&client.ID)
-	}
+	query := `insert into clients(name, telephone, mail, password) values($1, $2, $3, $4) returning client_id;`
+	err = c.txResolver.DefaultTrOrDB(ctx, c.db).
+		QueryRowxContext(ctx, query, client.Name, client.Telephone, client.Mail, client.Password).
+		Scan(&client.ID)
+
 	if err != nil {
 		return err
 	}
@@ -63,10 +54,6 @@ func (c *ClientPostgreSQLRepository) GetByID(ctx context.Context, id uint64) (*m
 		return nil, repositoriesErrors.EntityDoesNotExists
 	} else if err != nil {
 		return nil, err
-	}
-
-	if !clientDB.SubscriptionID.Valid {
-		clientDB.SubscriptionID = sql.NullInt64{Int64: 0, Valid: true}
 	}
 
 	clientModels := &models.Client{}
@@ -88,11 +75,7 @@ func (c *ClientPostgreSQLRepository) GetByTelephone(ctx context.Context, telepho
 	} else if err != nil {
 		return nil, err
 	}
-
-	if !clientDB.SubscriptionID.Valid {
-		clientDB.SubscriptionID = sql.NullInt64{Int64: 0, Valid: true}
-	}
-
+	
 	clientModels := &models.Client{}
 	err = copier.Copy(clientModels, clientDB)
 	if err != nil {
