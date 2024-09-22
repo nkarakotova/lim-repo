@@ -12,449 +12,371 @@ import (
 	"github.com/nkarakotova/lim-core/errors/repositoriesErrors"
 	"github.com/nkarakotova/lim-core/models"
 	"github.com/nkarakotova/lim-repo/postgreSQL/object_mothers"
-	"github.com/stretchr/testify/assert"
+	"github.com/nkarakotova/lim-core/repositories"
+
+	"github.com/ozontech/allure-go/pkg/framework/provider"
+	"github.com/ozontech/allure-go/pkg/framework/suite"
 )
 
-func TestTrainingMockCreateSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery(`insert into trainings(coach_id, hall_id, name, date_time, places_num) values($1, $2, $3, $4, $5) returning training_id;`).
-		WithArgs(1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id"}).AddRow(1))
-
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
-
-	training := postgreSQLObjectMother.CreateTestTraining()
-	err = repository.Create(ctx, training)
-
-	assert.NoError(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+type TrainingSuite struct {
+	suite.Suite
+	db         *sql.DB
+	mock       sqlmock.Sqlmock
+	repository repositories.TrainingRepository
+	ctx        context.Context
 }
 
-func TestTrainingMockCreateError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+func (s *TrainingSuite) BeforeEach(t provider.T) {
+	var err error
+	s.db, s.mock, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		t.Fatalf("error creating mock database: %v", err)
 	}
-	defer db.Close()
-
-	mock.ExpectQuery(`insert into trainings(coach_id, hall_id, name, date_time, places_num) values($1, $2, $3, $4, $5) returning training_id;`).
-		WithArgs(1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10)
-
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
-
-	training := postgreSQLObjectMother.CreateTestTraining()
-	err = repository.Create(ctx, training)
-
-	assert.Error(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+	dbx := sqlx.NewDb(s.db, "pgx")
+	s.repository = NewTrainingPostgreSQLRepository(dbx)
+	s.ctx = context.Background()
 }
 
-func TestTrainingMockDeleteSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery(`delete from trainings where training_id=$1 returning training_id;`).
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id"}).AddRow(1))
-
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
-
-	err = repository.Delete(ctx, 1)
-
-	assert.NoError(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+func (s *TrainingSuite) AfterEach(t provider.T) {
+	s.db.Close()
 }
 
-func TestTrainingMockDeleteError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockCreateSuccess(t provider.T) {
+	t.Title("TrainingMockCreate: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`insert into trainings(coach_id, hall_id, name, date_time, places_num) values($1, $2, $3, $4, $5) returning training_id;`).
+			WithArgs(1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id"}).AddRow(1))
 
-	mock.ExpectQuery(`delete from trainings where training_id=$1 returning training_id;`).
-		WithArgs(1)
+		training := postgreSQLObjectMother.CreateTestTraining()
+		err := s.repository.Create(s.ctx, training)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
 
-	err = repository.Delete(ctx, 1)
-
-	assert.Error(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetByIDSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockCreateFailure(t provider.T) {
+	t.Title("TrainingMockCreate: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`insert into trainings(coach_id, hall_id, name, date_time, places_num) values($1, $2, $3, $4, $5) returning training_id;`).
+			WithArgs(1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10)	
 
-	mock.ExpectQuery(`select * from trainings where training_id=$1;`).
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
-		AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		training := postgreSQLObjectMother.CreateTestTraining()
+		err := s.repository.Create(s.ctx, training)
 
-	new_training := postgreSQLObjectMother.CreateTestTraining()
-	training, err := repository.GetByID(ctx, 1)
+		sCtx.Assert().Error(err)
 
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_training, training)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetByIDError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockDeleteSuccess(t provider.T) {
+	t.Title("TrainingMockDelete: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`delete from trainings where training_id=$1 returning training_id;`).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id"}).AddRow(1))
 
-	mock.ExpectQuery(`select * from trainings where training_id=$1;`).WithArgs(1).WillReturnError(sql.ErrNoRows)
+		err := s.repository.Delete(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
 
-	_, err = repository.GetByID(ctx, 1)
-
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllByClientSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockDeleteFailure(t provider.T) {
+	t.Title("TrainingMockDelete: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`delete from trainings where training_id=$1 returning training_id;`).
+			WithArgs(1)
 
-	mock.ExpectQuery(`select * from trainings where training_id in (select training_id from clients_trainings where client_id=$1);`).
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
-		AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
+		err := s.repository.Delete(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().Error(err)
 
-	new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
-	trainings, err := repository.GetAllByClient(ctx, 1)
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_trainings, trainings)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllByClientError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetByIDSuccess(t provider.T) {
+	t.Title("TrainingMockGetByID: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where training_id=$1;`).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
+			AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
 
-	mock.ExpectQuery(`select * from trainings where training_id in (select training_id from clients_trainings where client_id=$1);`).
-	WithArgs(1).WillReturnError(sql.ErrNoRows)
+		new_training := postgreSQLObjectMother.CreateTestTraining()
+		training, err := s.repository.GetByID(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_training, training)
 
-	_, err = repository.GetAllByClient(ctx, 1)
-
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllByCoachOnDateSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetByIDFailure(t provider.T) {
+	t.Title("TrainingMockGetByID: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where training_id=$1;`).WithArgs(1).WillReturnError(sql.ErrNoRows)
 
-	mock.ExpectQuery(`select * from trainings where coach_id=$1 and date_time::date=$2::date;`).
-		WithArgs(1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC)).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
-		AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
+		_, err := s.repository.GetByID(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
 
-	new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
-	trainings, err := repository.GetAllByCoachOnDate(ctx, 1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC))
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_trainings, trainings)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllByCoachOnDateError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllByClientSuccess(t provider.T) {
+	t.Title("TrainingMockGetAllByClient: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where training_id in (select training_id from clients_trainings where client_id=$1);`).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
+			AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
 
-	mock.ExpectQuery(`select * from trainings where coach_id=$1 and date_time::date=$2::date;`).
-	WithArgs(1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC)).WillReturnError(sql.ErrNoRows)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
+		trainings, err := s.repository.GetAllByClient(s.ctx, 1)
 
-	_, err = repository.GetAllByCoachOnDate(ctx, 1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC))
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_trainings, trainings)
 
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllByDateTimeSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllByClientFailure(t provider.T) {
+	t.Title("TrainingMockGetAllByClient: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where training_id in (select training_id from clients_trainings where client_id=$1);`).
+			WithArgs(1).WillReturnError(sql.ErrNoRows)
 
-	mock.ExpectQuery(`select * from trainings where date_time=$1;`).
-		WithArgs(time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC)).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
-		AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
+		_, err := s.repository.GetAllByClient(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
 
-	new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
-	trainings, err := repository.GetAllByDateTime(ctx, time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC))
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_trainings, trainings)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllByDateTimeError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllByCoachOnDateSuccess(t provider.T) {
+	t.Title("TrainingMockGetAllByCoachOnDate: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where coach_id=$1 and date_time::date=$2::date;`).
+			WithArgs(1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC)).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
+			AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
 
-	mock.ExpectQuery(`select * from trainings where date_time=$1;`).
-	WithArgs(time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC)).WillReturnError(sql.ErrNoRows)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
+		trainings, err := s.repository.GetAllByCoachOnDate(s.ctx, 1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC))
 
-	_, err = repository.GetAllByDateTime(ctx, time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC))
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_trainings, trainings)
 
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllBetweenDateTimeSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllByCoachOnDateFailure(t provider.T) {
+	t.Title("TrainingMockGetAllByCoachOnDate: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where coach_id=$1 and date_time::date=$2::date;`).
+			WithArgs(1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC)).WillReturnError(sql.ErrNoRows)
 
-	mock.ExpectQuery(`select * from trainings where date_time between $1 and $2;`).
-		WithArgs(time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC)).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
-		AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
+		_, err := s.repository.GetAllByCoachOnDate(s.ctx, 1, time.Date(2024, 7, 7, 0, 0, 0, 0, time.UTC))
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
 
-	new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
-	trainings, err := repository.GetAllBetweenDateTime(ctx, time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC))
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_trainings, trainings)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockGetAllBetweenDateTimeError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllByDateTimeSuccess(t provider.T) {
+	t.Title("TrainingMockGetAllByDateTime: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where date_time=$1;`).
+			WithArgs(time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC)).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
+			AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
 
-	mock.ExpectQuery(`select * from trainings where date_time between $1 and $2;`).
-	WithArgs(time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC)).WillReturnError(sql.ErrNoRows)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
+		trainings, err := s.repository.GetAllByDateTime(s.ctx, time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC))
 
-	_, err = repository.GetAllBetweenDateTime(ctx, time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC))
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_trainings, trainings)
 
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockReduceAvailablePlacesNumSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllByDateTimeFailure(t provider.T) {
+	t.Title("TrainingMockGetAllByDateTime: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where date_time=$1;`).
+			WithArgs(time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC)).WillReturnError(sql.ErrNoRows)
+		
+		_, err := s.repository.GetAllByDateTime(s.ctx, time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC))
 
-	mock.ExpectQuery(`update trainings set available_places_num = available_places_num - 1 where training_id=$1 returning training_id;`).
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id"}).
-		AddRow(1))
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
-
-	err = repository.ReduceAvailablePlacesNum(ctx, 1)
-
-	assert.NoError(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockReduceAvailablePlacesNumError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllBetweenDateTimeSuccess(t provider.T) {
+	t.Title("TrainingMockGetAllBetweenDateTime: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where date_time between $1 and $2;`).
+			WithArgs(time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC)).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id", "coach_id", "hall_id", "name", "date_time", "places_num"}).
+			AddRow(1, 1, 1, "Name", time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC), 10))
 
-	mock.ExpectQuery(`update trainings set available_places_num = available_places_num - 1 where training_id=$1 returning training_id;`).WithArgs(1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		new_trainings := []models.Training{*postgreSQLObjectMother.CreateTestTraining()}
+		trainings, err := s.repository.GetAllBetweenDateTime(s.ctx, time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC))
 
-	err = repository.ReduceAvailablePlacesNum(ctx, 1)
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_trainings, trainings)
 
-	assert.Error(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockIncreaseAvailablePlacesNumSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockGetAllBetweenDateTimeFailure(t provider.T) {
+	t.Title("TrainingMockGetAllBetweenDateTime: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from trainings where date_time between $1 and $2;`).
+			WithArgs(time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC)).WillReturnError(sql.ErrNoRows)
+		
+		_, err := s.repository.GetAllBetweenDateTime(s.ctx, time.Date(2024, 7, 5, 12, 0, 0, 0, time.UTC), time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC))
 
-	mock.ExpectQuery(`update trainings set available_places_num = available_places_num + 1 where training_id=$1 returning training_id;`).
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"training_id"}).
-		AddRow(1))
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
-
-	err = repository.IncreaseAvailablePlacesNum(ctx, 1)
-
-	assert.NoError(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestTrainingMockIncreaseAvailablePlacesNumError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *TrainingSuite) TestTrainingMockReduceAvailablePlacesNumSuccess(t provider.T) {
+	t.Title("TrainingMockReduceAvailablePlacesNum: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`update trainings set available_places_num = available_places_num - 1 where training_id=$1 returning training_id;`).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id"}).
+			AddRow(1))
 
-	mock.ExpectQuery(`update trainings set available_places_num = available_places_num + 1 where training_id=$1 returning training_id;`).WithArgs(1)
+		err := s.repository.ReduceAvailablePlacesNum(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewTrainingPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
 
-	err = repository.IncreaseAvailablePlacesNum(ctx, 1)
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
 
-	assert.Error(t, err)
+func (s *TrainingSuite) TestTrainingMockReduceAvailablePlacesNumFailure(t provider.T) {
+	t.Title("TrainingMockReduceAvailablePlacesNum: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`update trainings set available_places_num = available_places_num - 1 where training_id=$1 returning training_id;`).WithArgs(1)
+		
+		err := s.repository.ReduceAvailablePlacesNum(s.ctx, 1)
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		sCtx.Assert().Error(err)
+
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
+
+func (s *TrainingSuite) TestTrainingMockIncreaseAvailablePlacesNumSuccess(t provider.T) {
+	t.Title("TrainingMockIncreaseAvailablePlacesNum: Success")
+	t.Tags("Training")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`update trainings set available_places_num = available_places_num + 1 where training_id=$1 returning training_id;`).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"training_id"}).
+			AddRow(1))
+
+		err := s.repository.IncreaseAvailablePlacesNum(s.ctx, 1)
+
+		sCtx.Assert().NoError(err)
+
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
+
+func (s *TrainingSuite) TestTrainingMockIncreaseAvailablePlacesNumFailure(t provider.T) {
+	t.Title("TrainingMockIncreaseAvailablePlacesNum: Failure")
+	t.Tags("Training")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`update trainings set available_places_num = available_places_num + 1 where training_id=$1 returning training_id;`).WithArgs(1)
+		
+		err := s.repository.IncreaseAvailablePlacesNum(s.ctx, 1)
+
+		sCtx.Assert().Error(err)
+
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
+
+func TestTrainingSuiteRunner(t *testing.T) {
+	suite.RunSuite(t, new(TrainingSuite))
 }

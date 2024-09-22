@@ -10,10 +10,13 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/jinzhu/copier v0.4.0
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/nkarakotova/lim-core v0.0.0-20240921191338-fce61d4b2474
+	github.com/nkarakotova/lim-core v0.0.0-20240922101955-7405e8af4faf
+	github.com/ozontech/allure-go/pkg/framework v0.6.32
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.31.0
 )
+
+require github.com/ozontech/allure-go/pkg/allure v0.6.13 // indirect
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
@@ -75,7 +78,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	github.com/zhashkevych/go-sqlxmock v1.5.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect

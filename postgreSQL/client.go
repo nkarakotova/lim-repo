@@ -75,7 +75,7 @@ func (c *ClientPostgreSQLRepository) GetByTelephone(ctx context.Context, telepho
 	} else if err != nil {
 		return nil, err
 	}
-	
+
 	clientModels := &models.Client{}
 	err = copier.Copy(clientModels, clientDB)
 	if err != nil {
@@ -110,7 +110,7 @@ func (c *ClientPostgreSQLRepository) GetByTraining(ctx context.Context, id uint6
 	return clientModels, nil
 }
 
-func (c *ClientPostgreSQLRepository) СreateAssignment(ctx context.Context, clientID, trainingID uint64) error {
+func (c *ClientPostgreSQLRepository) CreateAssignment(ctx context.Context, clientID, trainingID uint64) error {
 	query := `insert into clients_trainings(client_id, training_id) values($1, $2) returning client_id;`
 
 	err := c.txResolver.DefaultTrOrDB(ctx, c.db).QueryRowxContext(ctx, query, clientID, trainingID).Scan(&clientID)

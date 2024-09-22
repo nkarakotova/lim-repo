@@ -2,212 +2,192 @@ package postgreSQL
 
 import (
 	"context"
-	"testing"
 	"database/sql"
+	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
-	"github.com/nkarakotova/lim-core/models"
 
-	"github.com/nkarakotova/lim-repo/postgreSQL/object_mothers"
-	"github.com/stretchr/testify/assert"
+	"github.com/nkarakotova/lim-core/models"
+	"github.com/nkarakotova/lim-core/repositories"
+
+	postgreSQLObjectMother "github.com/nkarakotova/lim-repo/postgreSQL/object_mothers"
 	"github.com/nkarakotova/lim-core/errors/repositoriesErrors"
+
+	"github.com/ozontech/allure-go/pkg/framework/provider"
+	"github.com/ozontech/allure-go/pkg/framework/suite"
 )
 
-func TestCoachMockCreateSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery(`insert into coaches(name) values($1) returning coach_id;`).
-  		WithArgs("Name").
-  		WillReturnRows(sqlmock.NewRows([]string{"coach_id"}).AddRow(1))
-
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
-	
-	coach := postgreSQLObjectMother.CreateTestCoach()
-	err = repository.Create(ctx, coach)
-	
-	assert.NoError(t, err)
-		 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+type CoachSuite struct {
+	suite.Suite
+	db         *sql.DB
+	mock       sqlmock.Sqlmock
+	repository repositories.CoachRepository
+	ctx        context.Context
 }
 
-func TestCoachMockCreateError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+func (s *CoachSuite) BeforeEach(t provider.T) {
+	var err error
+	s.db, s.mock, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		t.Fatalf("error creating mock database: %v", err)
 	}
-	defer db.Close()
-
-	mock.ExpectQuery(`insert into coaches(name) values($1) returning coach_id;`).
-  		WithArgs("Name")
-
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
-	
-	coach := postgreSQLObjectMother.CreateTestCoach()
-	err = repository.Create(ctx, coach)
-
-	assert.Error(t, err)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+	dbx := sqlx.NewDb(s.db, "pgx")
+	s.repository = NewCoachPostgreSQLRepository(dbx)
+	s.ctx = context.Background()
 }
 
-func TestCoachMockGetByIDSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery(`select * from coaches where coach_id = $1;`).
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"coach_id", "name"}).
-		AddRow(1, "Name"))
-
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
-
-	new_coach := postgreSQLObjectMother.CreateTestCoach()
-	coach, err := repository.GetByID(ctx, 1)
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_coach, coach)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+func (s *CoachSuite) AfterEach(t provider.T) {
+	s.db.Close()
 }
 
-func TestCoachMockGetByIDError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *CoachSuite) TestCoachMockCreateSuccess(t provider.T) {
+	t.Title("CoachMockCreate: Success")
+	t.Tags("Coach")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`insert into coaches(name) values($1) returning coach_id;`).
+			WithArgs("Name").
+			WillReturnRows(sqlmock.NewRows([]string{"coach_id"}).AddRow(1))
 
-	mock.ExpectQuery(`select * from coaches where coach_id = $1;`).WithArgs(1).WillReturnError(sql.ErrNoRows)
+		coach := postgreSQLObjectMother.CreateTestCoach()
+		err := s.repository.Create(s.ctx, coach)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
 
-	_, err = repository.GetByID(ctx, 1)
-
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestCoachMockGetByNameSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *CoachSuite) TestCoachMockCreateFailure(t provider.T) {
+	t.Title("CoachMockCreate: Failure")
+	t.Tags("Coach")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`insert into coaches(name) values($1) returning coach_id;`).
+			WithArgs("Name")
 
-	mock.ExpectQuery(`select * from coaches where name = $1;`).
-		WithArgs("Name").
-		WillReturnRows(sqlmock.NewRows([]string{"coach_id", "name"}).
-		AddRow(1, "Name"))
+		coach := postgreSQLObjectMother.CreateTestCoach()
+		err := s.repository.Create(s.ctx, coach)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().Error(err)
 
-	new_coach := postgreSQLObjectMother.CreateTestCoach()
-	coach, err := repository.GetByName(ctx, "Name")
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_coach, coach)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestCoachMockGetByNameError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *CoachSuite) TestCoachMockGetByIDSuccess(t provider.T) {
+	t.Title("CoachMockGetByID: Success")
+	t.Tags("Coach")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from coaches where coach_id = $1;`).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"coach_id", "name"}).
+				AddRow(1, "Name"))
 
-	mock.ExpectQuery(`select * from coaches where name = $1;`).WithArgs("Name").WillReturnError(sql.ErrNoRows)
+		new_coach := postgreSQLObjectMother.CreateTestCoach()
+		coach, err := s.repository.GetByID(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_coach, coach)
 
-	_, err = repository.GetByName(ctx, "Name")
-
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestCoachMockGetAllSuccess(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *CoachSuite) TestCoachMockGetByIDFailure(t provider.T) {
+	t.Title("CoachMockGetByID: Failure")
+	t.Tags("Coach")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from coaches where coach_id = $1;`).WithArgs(1).WillReturnError(sql.ErrNoRows)
 
-	mock.ExpectQuery(`select * from coaches;`).
-		WillReturnRows(sqlmock.NewRows([]string{"coach_id", "name"}).
-		AddRow(1, "Name"))
+		_, err := s.repository.GetByID(s.ctx, 1)
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
 
-	new_coaches := []models.Coach{*postgreSQLObjectMother.CreateTestCoach()}
-	coach, err := repository.GetAll(ctx)
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, new_coaches, coach)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
 }
 
-func TestCoachMockGetAllError(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("error creating mock database: %v", err)
-	}
-	defer db.Close()
+func (s *CoachSuite) TestCoachMockGetByNameSuccess(t provider.T) {
+	t.Title("CoachMockGetByName: Success")
+	t.Tags("Coach")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from coaches where name = $1;`).
+			WithArgs("Name").
+			WillReturnRows(sqlmock.NewRows([]string{"coach_id", "name"}).
+				AddRow(1, "Name"))
 
-	mock.ExpectQuery(`select * from coaches;`).WillReturnError(sql.ErrNoRows)
+		new_coach := postgreSQLObjectMother.CreateTestCoach()
+		coach, err := s.repository.GetByName(s.ctx, "Name")
 
-	dbx := sqlx.NewDb(db, "pgx")
-	repository := NewCoachPostgreSQLRepository(dbx)
-	ctx := context.Background()
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_coach, coach)
 
-	_, err = repository.GetAll(ctx)
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
 
-	assert.ErrorIs(t, err, repositoriesErrors.EntityDoesNotExists)
+func (s *CoachSuite) TestCoachMockGetByNameFailure(t provider.T) {
+	t.Title("CoachMockGetByName: Failure")
+	t.Tags("Coach")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from coaches where name = $1;`).WithArgs("Name").WillReturnError(sql.ErrNoRows)
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		_, err := s.repository.GetByName(s.ctx, "Name")
+
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
+
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
+
+func (s *CoachSuite) TestCoachMockGetAllSuccess(t provider.T) {
+	t.Title("CoachMockGetAll: Success")
+	t.Tags("Coach")
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from coaches;`).
+			WillReturnRows(sqlmock.NewRows([]string{"coach_id", "name"}).
+			AddRow(1, "Name"))
+
+		new_coaches := []models.Coach{*postgreSQLObjectMother.CreateTestCoach()}
+		coach, err := s.repository.GetAll(s.ctx)
+
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().Equal(new_coaches, coach)
+
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
+
+func (s *CoachSuite) TestCoachMockGetAllFailure(t provider.T) {
+	t.Title("CoachMockGetAll: Failure")
+	t.Tags("Coach")
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		s.mock.ExpectQuery(`select * from coaches;`).WillReturnError(sql.ErrNoRows)
+
+		_, err := s.repository.GetAll(s.ctx)
+
+		sCtx.Assert().ErrorIs(err, repositoriesErrors.EntityDoesNotExists)
+
+		if err := s.mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
+		}
+	})
+}
+
+func TestCoachSuiteRunner(t *testing.T) {
+	suite.RunSuite(t, new(CoachSuite))
 }
